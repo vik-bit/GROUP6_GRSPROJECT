@@ -14,21 +14,10 @@ spec:
     spec:
       containers:
       - name: service-b
-        image: microservice:v1
-        ports:
-        - containerPort: 8080
+        image: service-b:latest
+        iimagePullPolicy: IfNotPresent
         env:
         - name: NEXT_SERVICE
           value: "http://service-c"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: service-b
-spec:
-  selector:
-    app: service-b
-  ports:
-  - port: 80
-    targetPort: 8080
-
+        ports:
+        - containerPort: 8080

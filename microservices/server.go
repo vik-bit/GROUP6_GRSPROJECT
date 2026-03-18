@@ -21,19 +21,20 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
+	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
-	resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
 
 	fmt.Fprintf(w, "-> %s", string(body))
 }
 
 func main() {
-
 	http.HandleFunc("/", handler)
 
 	fmt.Println("Listening on :8080")
-
 	http.ListenAndServe(":8080", nil)
-
 }
