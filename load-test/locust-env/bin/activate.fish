@@ -33,7 +33,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV /home/iiitd/Desktop/project/Group6_GRSProject/load-test/locust-env
+set -gx VIRTUAL_ENV /home/iiitd/Desktop/Project/GROUP6_GRSPROJECT/load-test/locust-env
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/"bin $PATH

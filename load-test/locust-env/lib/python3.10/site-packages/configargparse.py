@@ -911,19 +911,60 @@ class ArgumentParser(argparse.ArgumentParser):
             "given path, then exits",
         )
 
-        self._config_file_open_func = kwargs.pop("config_file_open_func", open)
+        config_file_open_func = kwargs.pop("config_file_open_func", open)
+
+        # Validate args before proceeding
+        for name, value in [
+            ("default_config_files", default_config_files),
+            ("args_for_setting_config_path", args_for_setting_config_path),
+            ("args_for_writing_out_config_file", args_for_writing_out_config_file),
+        ]:
+            if not isinstance(value, (list, tuple)):
+                hint = " (e.g. ['%s'])" % value if isinstance(value, str) else ""
+                raise TypeError("%s must be a list%s. Got: %r" % (name, hint, value))
+
+        if not callable(config_file_open_func):
+            raise TypeError(
+                "config_file_open_func must be callable. Got: %r"
+                % (config_file_open_func,)
+            )
+
+        self._config_file_open_func = config_file_open_func
 
         self._add_config_file_help = add_config_file_help
         self._add_env_var_help = add_env_var_help
         self._auto_env_var_prefix = auto_env_var_prefix
+
+        if "formatter_class" in kwargs:
+            fc = kwargs["formatter_class"]
+            if isinstance(fc, type) and not issubclass(fc, argparse.HelpFormatter):
+                msg = (
+                    "formatter_class must be a subclass of "
+                    "argparse.HelpFormatter. Got: %r." % (fc,)
+                )
+                if issubclass(fc, ConfigFileParser):
+                    msg += " Perhaps you meant to use config_file_parser_class?"
+                raise TypeError(msg)
 
         argparse.ArgumentParser.__init__(self, *args, **kwargs)
 
         # parse the additional args
         if config_file_parser_class is None:
             self._config_file_parser = DefaultConfigFileParser()
-        else:
+        elif isinstance(config_file_parser_class, ConfigFileParser):
+            self._config_file_parser = config_file_parser_class
+        elif isinstance(config_file_parser_class, type) and issubclass(
+            config_file_parser_class, ConfigFileParser
+        ):
             self._config_file_parser = config_file_parser_class()
+        else:
+            raise TypeError(
+                "config_file_parser_class must be a subclass of "
+                "ConfigFileParser (such as DefaultConfigFileParser, "
+                "YAMLConfigFileParser, etc.). "
+                "Got: %r. Perhaps you meant to use formatter_class?"
+                % (config_file_parser_class,)
+            )
 
         self._default_config_files = default_config_files
         self._ignore_unknown_config_file_keys = ignore_unknown_config_file_keys
@@ -953,14 +994,27 @@ class ArgumentParser(argparse.ArgumentParser):
     def _find_insertion_index(self, args):
         """Find the right index to insert config/env var args into the command line.
 
-        Handles three cases: if '--' separator exists, insert before it so
-        injected args don't end up in the positional-only region. If any
-        positional arg uses REMAINDER and there are no optional args on the
-        command line, prepend so REMAINDER doesn't swallow them. Otherwise
-        insert before the first optional arg, or append if none.
+        Inserts before the ``--`` separator if present, before a subparser
+        command so the parent parser sees injected args first, before the
+        first optional arg, or at position 0 when a REMAINDER positional
+        exists. Falls back to appending.
         """
         if "--" in args:
             return args.index("--")
+
+        # Find the first subcommand index, if any
+        subcmd_index = None
+        for action in self._actions:
+            if isinstance(action, argparse._SubParsersAction) and action.choices:
+                for i, arg in enumerate(args):
+                    if arg in action.choices:
+                        subcmd_index = i
+                        break
+                break
+
+        if subcmd_index is not None:
+            return subcmd_index
+
         first_opt = None
         for i, arg in enumerate(args):
             if arg.startswith(tuple(self.prefix_chars)):
@@ -968,11 +1022,13 @@ class ArgumentParser(argparse.ArgumentParser):
                 break
         if first_opt is not None:
             return first_opt
+
         # No optional args on command line
         if any(
             a.is_positional_arg and a.nargs == argparse.REMAINDER for a in self._actions
         ):
             return 0
+
         return len(args)
 
     def parse_args(

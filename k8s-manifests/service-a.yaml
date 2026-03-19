@@ -14,8 +14,8 @@ spec:
     spec:
       containers:
       - name: service-a
-        image: microservice:v1
-        imagePullPolicy: IfNotPresent
+        image: microservice:latest
+        imagePullPolicy: Never
         ports:
         - containerPort: 8080
         env:

@@ -90,6 +90,7 @@ kubectl apply -f "$PROJECT_ROOT/k8s-manifests/service-c-svc.yaml"
 kubectl wait --for=condition=Ready pod -l app=service-c --timeout=120s
 
 kubectl apply -f "$PROJECT_ROOT/k8s-manifests/service-b.yaml"
+kubectl apply -f "$PROJECT_ROOT/k8s-manifests/service-b-svc.yaml"
 kubectl wait --for=condition=Ready pod -l app=service-b --timeout=120s
 
 kubectl apply -f "$PROJECT_ROOT/k8s-manifests/service-a.yaml"
@@ -105,7 +106,46 @@ echo "🔍 Testing service chain..."
 curl http://localhost:8080
 echo ""
 
+
 # ------------------- Step 11: Start Locust load test -------------------
-echo "🔥 Starting Locust load test..."
-cd "$PROJECT_ROOT/load-tests"
-locust -f locust.py --host=http://localhost:8080
+echo "🔥 Setting up Locust environment..."
+
+LOCUST_DIR="$PROJECT_ROOT/load-test"
+VENV_DIR="$LOCUST_DIR/locust-env"
+
+cd "$LOCUST_DIR"
+
+# Create venv if it doesn't exist
+if [ ! -d "$VENV_DIR" ]; then
+    echo "📦 Creating virtual environment..."
+    python3 -m venv locust-env
+fi
+
+# Activate venv
+source "$VENV_DIR/bin/activate"
+
+# Install Locust if needed
+if ! command -v locust &> /dev/null; then
+    echo "⬇️ Installing Locust..."
+    pip install --upgrade pip
+    pip install locust
+fi
+
+echo "🔥 Running Locust load test..."
+
+USERS=50
+SPAWN_RATE=10
+RUN_TIME="2m"
+
+
+
+locust -f locustfile.py \
+  --host=http://localhost:8080 \
+  --headless \
+  -u $USERS \
+  -r $SPAWN_RATE \
+  --run-time $RUN_TIME \
+  --csv=locust_stats
+
+bash flannelmetrics.sh
+

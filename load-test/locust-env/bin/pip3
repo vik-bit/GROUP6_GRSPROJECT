@@ -1,4 +1,4 @@
-#!/home/iiitd/Desktop/project/Group6_GRSProject/load-test/locust-env/bin/python3
+#!/home/iiitd/Desktop/Project/GROUP6_GRSPROJECT/load-test/locust-env/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys

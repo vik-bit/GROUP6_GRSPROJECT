@@ -14,8 +14,8 @@ spec:
     spec:
       containers:
       - name: service-b
-        image: service-b:latest
-        iimagePullPolicy: IfNotPresent
+        image: microservice:latest
+        imagePullPolicy: Never
         env:
         - name: NEXT_SERVICE
           value: "http://service-c"

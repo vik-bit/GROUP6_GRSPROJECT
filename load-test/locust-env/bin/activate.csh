@@ -8,7 +8,7 @@ alias deactivate 'test $?_OLD_VIRTUAL_PATH != 0 && setenv PATH "$_OLD_VIRTUAL_PA
 # Unset irrelevant variables.
 deactivate nondestructive
 
-setenv VIRTUAL_ENV /home/iiitd/Desktop/project/Group6_GRSProject/load-test/locust-env
+setenv VIRTUAL_ENV /home/iiitd/Desktop/Project/GROUP6_GRSPROJECT/load-test/locust-env
 
 set _OLD_VIRTUAL_PATH="$PATH"
 setenv PATH "$VIRTUAL_ENV/"bin":$PATH"
