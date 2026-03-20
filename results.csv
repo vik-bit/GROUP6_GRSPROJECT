@@ -1,2 +1,3 @@
 timestamp,users,rps,p95_latency_ms,cpu_pods,memory_pods,cpu_nodes,memory_nodes,ping_intra_ms,ping_inter_ms,bandwidth_mbps
 2026-03-19 14:34:55,50,,,0,0,0,0,0.036 ms,0.082 ms,NA
+2026-03-20 12:25:24,50,32.677789451415194,3,NA,NA,NA,NA,NA,NA,NA

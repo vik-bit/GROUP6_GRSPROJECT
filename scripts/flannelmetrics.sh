@@ -25,36 +25,55 @@ if [ ! -f "$STATS_FILE" ]; then
   exit 1
 fi
 
-P95=$(awk -F',' 'NR>1 && $1=="Aggregated"{print $8}' "$STATS_FILE")
-RPS=$(awk -F',' 'NR>1 && $1=="Aggregated"{print $13}' "$STATS_FILE")
+# ✅ FIXED: correct columns + correct field match + last row only
+P95=$(awk -F',' 'NR>1 && $2=="Aggregated"{print $17}' "$STATS_FILE" | tail -1)
+RPS=$(awk -F',' 'NR>1 && $2=="Aggregated"{print $10}' "$STATS_FILE" | tail -1)
+
+# fallback if empty
+P95=${P95:-NA}
+RPS=${RPS:-NA}
 
 # ------------------- Kubernetes metrics -------------------
 CPU_PODS=0
 MEM_PODS=0
 
-while read -r cpu mem; do
-  CPU_PODS=$(echo "$CPU_PODS + ${cpu%m}" | bc)
-  MEM_PODS=$(echo "$MEM_PODS + ${mem%Mi}" | bc)
-done < <(kubectl top pods --no-headers | awk '{print $2, $3}')
+if kubectl top pods --no-headers >/dev/null 2>&1; then
+  while read -r cpu mem; do
+    CPU_PODS=$(echo "$CPU_PODS + ${cpu%m}" | bc)
+    MEM_PODS=$(echo "$MEM_PODS + ${mem%Mi}" | bc)
+  done < <(kubectl top pods --no-headers | awk '{print $2, $3}')
+else
+  CPU_PODS="NA"
+  MEM_PODS="NA"
+fi
 
 CPU_NODES=0
 MEM_NODES=0
 
-while read -r cpu mem; do
-  CPU_NODES=$(echo "$CPU_NODES + ${cpu%m}" | bc)
-  MEM_NODES=$(echo "$MEM_NODES + ${mem%Mi}" | bc)
-done < <(kubectl top nodes --no-headers | awk '{print $2, $4}')
+if kubectl top nodes --no-headers >/dev/null 2>&1; then
+  while read -r cpu mem; do
+    CPU_NODES=$(echo "$CPU_NODES + ${cpu%m}" | bc)
+    MEM_NODES=$(echo "$MEM_NODES + ${mem%Mi}" | bc)
+  done < <(kubectl top nodes --no-headers | awk '{print $2, $4}')
+else
+  CPU_NODES="NA"
+  MEM_NODES="NA"
+fi
 
 # ------------------- Network (ping intra/inter) -------------------
-# Replace these with your actual pod names
-INTRA_POD=$(kubectl get pods -l app=service-b -o jsonpath='{.items[0].metadata.name}')
-INTER_POD=$(kubectl get pods -l app=service-c -o jsonpath='{.items[0].metadata.name}')
+INTRA_POD=$(kubectl get pods -l app=service-b -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+INTER_POD=$(kubectl get pods -l app=service-c -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
 
-INTRA_IP=$(kubectl get pod "$INTRA_POD" -o jsonpath='{.status.podIP}')
-INTER_IP=$(kubectl get pod "$INTER_POD" -o jsonpath='{.status.podIP}')
+if [ -n "$INTRA_POD" ] && [ -n "$INTER_POD" ]; then
+  INTRA_IP=$(kubectl get pod "$INTRA_POD" -o jsonpath='{.status.podIP}')
+  INTER_IP=$(kubectl get pod "$INTER_POD" -o jsonpath='{.status.podIP}')
 
-PING_INTRA=$(kubectl exec "$INTRA_POD" -- ping -c 3 "$INTRA_IP" | tail -1 | awk -F '/' '{print $5}')
-PING_INTER=$(kubectl exec "$INTRA_POD" -- ping -c 3 "$INTER_IP" | tail -1 | awk -F '/' '{print $5}')
+  PING_INTRA=$(kubectl exec "$INTRA_POD" -- ping -c 3 "$INTRA_IP" | tail -1 | awk -F '/' '{print $5}')
+  PING_INTER=$(kubectl exec "$INTRA_POD" -- ping -c 3 "$INTER_IP" | tail -1 | awk -F '/' '{print $5}')
+else
+  PING_INTRA="NA"
+  PING_INTER="NA"
+fi
 
 # ------------------- iperf3 bandwidth -------------------
 IPERF_IP=$(kubectl get svc iperf-service -o jsonpath='{.spec.clusterIP}' 2>/dev/null || echo "")
