@@ -7,6 +7,8 @@ PROJECT_ROOT="$(realpath "$SCRIPT_DIR/..")"
 
 RESULTS_FILE="$PROJECT_ROOT/results.csv"
 
+
+
 echo "📊 Collecting metrics..."
 
 # ------------------- Config -------------------
@@ -37,7 +39,7 @@ RPS=${RPS:-NA}
 CPU_PODS=0
 MEM_PODS=0
 
-if kubectl top pods --no-headers >/dev/null 2>&1; then
+if kubectl top pods --no-headers >/dev/null 2>&1 && kubectl top nodes --no-headers >/dev/null 2>&1; then
   while read -r cpu mem; do
     CPU_PODS=$(echo "$CPU_PODS + ${cpu%m}" | bc)
     MEM_PODS=$(echo "$MEM_PODS + ${mem%Mi}" | bc)
@@ -75,25 +77,63 @@ else
   PING_INTER="NA"
 fi
 
-# ------------------- iperf3 bandwidth -------------------
-IPERF_IP=$(kubectl get svc iperf-service -o jsonpath='{.spec.clusterIP}' 2>/dev/null || echo "")
 
-if [ -n "$IPERF_IP" ]; then
-  IPERF_OUT=$(iperf3 -c "$IPERF_IP" -J 2>/dev/null || true)
+# ------------------- iperf3 bandwidth (auto setup) -------------------
 
-  if command -v jq &> /dev/null && [ -n "$IPERF_OUT" ]; then
-    BANDWIDTH_BPS=$(echo "$IPERF_OUT" | jq '.end.sum_received.bits_per_second')
-    BANDWIDTH_MBPS=$(echo "$BANDWIDTH_BPS / 1000000" | bc)
-  else
-    BANDWIDTH_MBPS="NA"
+echo "🔧 Ensuring iperf server is running..."
+
+# Check if service exists
+if ! kubectl get svc iperf-service >/dev/null 2>&1; then
+  echo "⚠️ iperf-service not found. Creating iperf server..."
+
+  # Create iperf server pod if not exists
+  if ! kubectl get pod iperf-server >/dev/null 2>&1; then
+    kubectl run iperf-server \
+      --image=networkstatic/iperf3 \
+      --labels="app=iperf" \
+      --restart=Never \
+      -- -s
   fi
+
+  # Expose service
+  kubectl expose pod iperf-server \
+    --name=iperf-service \
+    --port=5201 \
+    --target-port=5201
+
+  echo "⏳ Waiting for iperf server to be ready..."
+  sleep 5
 else
-  BANDWIDTH_MBPS="NA"
+  echo "✅ iperf-service already exists"
+fi
+
+
+
+# Run iperf inside cluster and capture ONLY JSON output
+echo "🚀 Running iperf test..."
+
+IPERF_RAW=$(kubectl run iperf-client --rm -i --restart=Never \
+  --image=networkstatic/iperf3 \
+  -- iperf3 -c iperf-service -J 2>&1)
+
+BANDWIDTH_MBPS="NA"
+
+# Extract only JSON block
+IPERF_JSON=$(echo "$IPERF_RAW" | sed -n '/^{/,$p' | sed '/^}/q')
+
+if command -v jq >/dev/null 2>&1 && [ -n "$IPERF_JSON" ]; then
+  BANDWIDTH_BPS=$(echo "$IPERF_JSON" | jq -r '
+    .end.sum_received.bits_per_second //
+    .end.sum_sent.bits_per_second //
+    empty
+  ' 2>/dev/null)
+
+  if [ -n "$BANDWIDTH_BPS" ]; then
+    BANDWIDTH_MBPS=$(echo "scale=3; $BANDWIDTH_BPS / 1000000" | bc)
+  fi
 fi
 
 # ------------------- Save results -------------------
 TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
 
 echo "$TIMESTAMP,$USERS,$RPS,$P95,$CPU_PODS,$MEM_PODS,$CPU_NODES,$MEM_NODES,$PING_INTRA,$PING_INTER,$BANDWIDTH_MBPS" >> "$RESULTS_FILE"
-
-echo "✅ Metrics collected and saved to $RESULTS_FILE"

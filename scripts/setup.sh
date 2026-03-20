@@ -5,6 +5,12 @@ set -e
 # Full Reset + Dev Cluster Setup
 # --------------------------
 
+echo "🔧 Installing required Python dependencies..."
+
+sudo apt update
+
+# Install Python + venv + pip + build essentials
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 PROJECT_ROOT="$SCRIPT_DIR/.."
 CLUSTER_NAME="cni-benchmark"
@@ -108,44 +114,59 @@ echo ""
 
 
 # ------------------- Step 11: Start Locust load test -------------------
+
+
 echo "🔥 Setting up Locust environment..."
 
 LOCUST_DIR="$PROJECT_ROOT/load-test"
 VENV_DIR="$LOCUST_DIR/locust-env"
 
 cd "$LOCUST_DIR"
-
-# Create venv if it doesn't exist
-if [ ! -d "$VENV_DIR" ]; then
-    echo "📦 Creating virtual environment..."
-    python3 -m venv locust-env
-fi
-
-# Activate venv
-source "$VENV_DIR/bin/activate"
-
-# Install Locust if needed
+# 1. Install if missing
 if ! command -v locust &> /dev/null; then
-    echo "⬇️ Installing Locust..."
-    pip install --upgrade pip
-    pip install locust
+    echo "⬇️ Installing Locust via pipx..."
+    pipx install locust
+    pipx ensurepath
 fi
 
-echo "🔥 Running Locust load test..."
+# 2. Force the PATH update for the current script execution
+export PATH="$PATH:$HOME/.local/bin"
 
-USERS=50
+# 3. Double-check it works before starting the loop
+if ! command -v locust &> /dev/null; then
+    echo "❌ Error: Locust still not found in PATH. Exiting."
+    exit 1
+fi
+
+# ... proceed to USER_LEVELS loop
+
+# No 'source activate' needed! 
+# You can jump straight to your scaling experiments.
+# ------------------- Scaling experiments -------------------
+USER_LEVELS=(50 100 200 300 400)
 SPAWN_RATE=10
-RUN_TIME="2m"
+RUN_TIME="1m"
 
+for USERS in "${USER_LEVELS[@]}"; do
+    echo "========================================"
+    echo "🚀 Running test with $USERS users"
+    echo "========================================"
 
+    locust -f locustfile.py \
+      --host=http://localhost:8080 \
+      --headless \
+      -u $USERS \
+      -r $SPAWN_RATE \
+      --run-time $RUN_TIME \
+      --csv=locust_stats
 
-locust -f locustfile.py \
-  --host=http://localhost:8080 \
-  --headless \
-  -u $USERS \
-  -r $SPAWN_RATE \
-  --run-time $RUN_TIME \
-  --csv=locust_stats
+    echo "📊 Collecting metrics for $USERS users..."
 
-bash flannelmetrics.sh
+      
+    
+    # Run your metrics collection script
+    sudo "$PROJECT_ROOT/scripts/flannelmetrics.sh" "$USERS"
 
+    echo "✅ Completed test for $USERS users"
+    echo ""
+done
