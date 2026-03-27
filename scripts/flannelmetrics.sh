@@ -6,7 +6,24 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(realpath "$SCRIPT_DIR/..")"
 
 RESULTS_FILE="$PROJECT_ROOT/results.csv"
+# ------------------- Wait for Prometheus pod -------------------
+PROM_POD=$(kubectl get pods -n monitoring -l app.kubernetes.io/name=prometheus -o jsonpath='{.items[0].metadata.name}')
+echo "⏳ Waiting for Prometheus pod ($PROM_POD) to be Ready..."
+kubectl wait --for=condition=Ready pod/$PROM_POD -n monitoring --timeout=180s
+echo "✅ Prometheus pod is Ready"
 
+# ------------------- Port-forward Prometheus -------------------
+kubectl port-forward pod/$PROM_POD 9090:9090 -n monitoring > /dev/null 2>&1 &
+echo "📊 Prometheus port-forwarded to localhost:9090"
+
+PROM_URL="http://localhost:9090/api/v1/query"
+
+query_prometheus() {
+  local result
+  result=$(curl -sG "$PROM_URL" --data-urlencode "query=$1" \
+            | jq -r '.data.result[0].value[1]' 2>/dev/null)
+  [[ -z "$result" || "$result" == "null" ]] && echo "NA" || echo "$result"
+}
 
 
 echo "📊 Collecting metrics..."
@@ -35,32 +52,48 @@ RPS=$(awk -F',' 'NR>1 && $2=="Aggregated"{print $10}' "$STATS_FILE" | tail -1)
 P95=${P95:-NA}
 RPS=${RPS:-NA}
 
-# ------------------- Kubernetes metrics -------------------
-CPU_PODS=0
-MEM_PODS=0
+# ------------------- Prometheus metrics -------------------
+echo "📊 Fetching Prometheus metrics..."
 
-if kubectl top pods --no-headers >/dev/null 2>&1 && kubectl top nodes --no-headers >/dev/null 2>&1; then
-  while read -r cpu mem; do
-    CPU_PODS=$(echo "$CPU_PODS + ${cpu%m}" | bc)
-    MEM_PODS=$(echo "$MEM_PODS + ${mem%Mi}" | bc)
-  done < <(kubectl top pods --no-headers | awk '{print $2, $3}')
+query_prometheus() {
+  local result
+  result=$(curl -sG "$PROM_URL" --data-urlencode "query=$1" \
+            | jq -r '.data.result[0].value[1]' 2>/dev/null)
+  # If empty or null, return NA
+  if [[ -z "$result" || "$result" == "null" ]]; then
+    echo "NA"
+  else
+    echo "$result"
+  fi
+}
+
+# Pod CPU (cores)
+CPU_PODS=$(query_prometheus 'sum(rate(container_cpu_usage_seconds_total{container!=""}[1m]))')
+[[ "$CPU_PODS" == "NA" ]] || CPU_PODS=$(printf "%.2f" "$CPU_PODS")
+
+# Pod Memory (bytes → MiB)
+MEM_PODS_RAW=$(query_prometheus 'sum(container_memory_usage_bytes{container!=""})')
+if [[ "$MEM_PODS_RAW" != "NA" ]]; then
+    MEM_PODS=$(echo "scale=2; $MEM_PODS_RAW / 1024 / 1024" | bc)
 else
-  CPU_PODS="NA"
-  MEM_PODS="NA"
+    MEM_PODS="NA"
 fi
 
-CPU_NODES=0
-MEM_NODES=0
+# Node CPU (%)
+CPU_NODES=$(query_prometheus '100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100)')
+[[ "$CPU_NODES" == "NA" ]] || CPU_NODES=$(printf "%.2f" "$CPU_NODES")
 
-if kubectl top nodes --no-headers >/dev/null 2>&1; then
-  while read -r cpu mem; do
-    CPU_NODES=$(echo "$CPU_NODES + ${cpu%m}" | bc)
-    MEM_NODES=$(echo "$MEM_NODES + ${mem%Mi}" | bc)
-  done < <(kubectl top nodes --no-headers | awk '{print $2, $4}')
+# Node Memory (bytes → MiB)
+MEM_NODES_RAW=$(query_prometheus 'sum(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes)')
+if [[ "$MEM_NODES_RAW" != "NA" ]]; then
+    MEM_NODES=$(echo "scale=2; $MEM_NODES_RAW / 1024 / 1024" | bc)
 else
-  CPU_NODES="NA"
-  MEM_NODES="NA"
+    MEM_NODES="NA"
 fi
+
+# fallback safety
+CPU_PODS=${CPU_PODS:-NA}
+CPU_NODES=${CPU_NODES:-NA}
 
 # ------------------- Network (ping intra/inter) -------------------
 INTRA_POD=$(kubectl get pods -l app=service-b -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")

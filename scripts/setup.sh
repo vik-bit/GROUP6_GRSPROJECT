@@ -5,11 +5,11 @@ set -e
 # Full Reset + Dev Cluster Setup
 # --------------------------
 
-echo "🔧 Installing required Python dependencies..."
+
 
 sudo apt update
 
-# Install Python + venv + pip + build essentials
+
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 PROJECT_ROOT="$SCRIPT_DIR/.."
@@ -111,16 +111,53 @@ sleep 5
 echo "🔍 Testing service chain..."
 curl http://localhost:8080
 echo ""
+# ------------------- Step 11: Helm + Prometheus/Grafana -------------------
+echo "🔥 Setting up Prometheus & Grafana..."
 
+if ! command -v helm >/dev/null 2>&1; then
+    echo "⚠️ Helm not found. Installing Helm..."
+    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    export PATH=$PATH:/usr/local/bin
+fi
+echo "✅ Helm installed: $(helm version --short)"
 
-# ------------------- Step 11: Start Locust load test -------------------
+if ! kubectl get ns monitoring >/dev/null 2>&1; then
+    echo "🚀 Installing kube-prometheus-stack..."
+    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+    helm repo update
+    helm install monitoring prometheus-community/kube-prometheus-stack -n monitoring --create-namespace
+else
+    echo "✅ kube-prometheus-stack already installed"
+fi
+
+# Background port-forward Prometheus
+kubectl port-forward svc/monitoring-kube-prometheus-stack-prometheus 9090:9090 -n monitoring > /dev/null 2>&1 &
+PF_PID=$!
+
+# Wait until Prometheus is ready
+echo "⏳ Waiting for Prometheus API..."
+for i in {1..30}; do
+    if curl -s http://localhost:9090/-/ready | grep -q "Prometheus"; then
+        echo "✅ Prometheus is ready!"
+        break
+    fi
+    sleep 2
+done
+
+export PROM_URL="http://localhost:9090"
+
+# ------------------- Step 12: Start Locust load test -------------------
 
 
 echo "🔥 Setting up Locust environment..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(realpath "$SCRIPT_DIR/..")"
+
+RESULTS_FILE="$PROJECT_ROOT/results.csv"
 
 LOCUST_DIR="$PROJECT_ROOT/load-test"
 VENV_DIR="$LOCUST_DIR/locust-env"
-
+sed -i '1i Timestamp,Users,Requestpersec,Percentile95_latency_ms,Cpu_pods,Memory_pods,Cpu_nodes,Memory_nodes,Ping_intra_ms,Ping_inter_ms,Bandwidth_mbps' $RESULTS_FILE
 cd "$LOCUST_DIR"
 # 1. Install if missing
 if ! command -v locust &> /dev/null; then
