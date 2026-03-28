@@ -19,15 +19,56 @@ docker network prune -f
 docker system prune -af
 echo "✅ Cleanup complete"
 
-# ------------------- Step 2: Validate tools -------------------
-for tool in docker kubectl kind helm jq; do
-    if ! command -v "$tool" &>/dev/null; then
-        echo "❌ $tool not found. Install it before running."
-        exit 1
-    else
-        echo "✅ $tool installed"
-    fi
-done
+
+# ------------------- Step 2: Validate tools (auto-install for naive systems) -------------------
+echo "🔍 Checking required tools..."
+
+install_docker() {
+    echo "📦 Installing docker..."
+    sudo apt update
+    sudo apt install -y docker.io
+    sudo systemctl enable docker
+    sudo systemctl start docker
+}
+
+install_kubectl() {
+    echo "📦 Installing kubectl..."
+    curl -LO "https://dl.k8s.io/release/$(curl -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    chmod +x kubectl
+    sudo mv kubectl /usr/local/bin/
+}
+
+install_kind() {
+    echo "📦 Installing kind..."
+    curl -Lo kind https://kind.sigs.k8s.io/dl/latest/kind-linux-amd64
+    chmod +x kind
+    sudo mv kind /usr/local/bin/
+}
+
+install_helm() {
+    echo "📦 Installing helm..."
+    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+}
+
+install_jq() {
+    echo "📦 Installing jq..."
+    sudo apt update
+    sudo apt install -y jq
+}
+
+command -v docker >/dev/null || install_docker
+command -v kubectl >/dev/null || install_kubectl
+command -v kind >/dev/null || install_kind
+command -v helm >/dev/null || install_helm
+command -v jq >/dev/null || install_jq
+
+echo "✅ All tools are installed"
+
+# Ensure Docker daemon is running
+if ! docker info >/dev/null 2>&1; then
+    echo "🚨 Docker not running. Starting..."
+    sudo systemctl start docker
+fi
 
 # ------------------- Step 3: Pull Kind image -------------------
 echo "⬇️ Pulling Kind node image..."
@@ -165,7 +206,7 @@ for USERS in "${USER_LEVELS[@]}"; do
       --csv=locust_stats
 
     echo "📊 Collecting metrics..."
-    sudo "$PROJECT_ROOT/scripts/metrics.sh" "$USERS"
+    sudo "$PROJECT_ROOT/scripts/metrics.sh" "$USERS" 
 done
 
 echo "🎉 All tests complete!"

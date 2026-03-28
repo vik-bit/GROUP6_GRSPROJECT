@@ -1,146 +1,205 @@
 #!/bin/bash
 set -euo pipefail
 
-# --------------------------
-# Full Reset + Dev Cluster Setup (Cilium)
-# --------------------------
+trap 'echo "❌ Error at line $LINENO"; exit 1' ERR
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-PROJECT_ROOT="$(realpath "$SCRIPT_DIR/..")"
+# --------------------------
+# Config
+# --------------------------
 CLUSTER_NAME="cni-benchmark"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(realpath "$SCRIPT_DIR/..")"
 CLUSTER_YAML="$PROJECT_ROOT/cluster/cluster.yaml"
 RESULTS_FILE="$PROJECT_ROOT/results.csv"
 
-# ------------------- Step 1: Cleanup -------------------
-echo "🧹 Cleaning up old Kind cluster and Docker artifacts..."
+# --------------------------
+# Logging helpers
+# --------------------------
+log() { echo -e "\n🔹 $1"; }
+success() { echo "✅ $1"; }
+warn() { echo "⚠️ $1"; }
+
+# --------------------------
+# Install helpers
+# --------------------------
+install_docker() {
+    log "Installing Docker..."
+    sudo apt update
+    sudo apt install -y docker.io
+    sudo systemctl enable docker
+    sudo systemctl start docker
+}
+
+install_kubectl() {
+    log "Installing kubectl..."
+    curl -LO "https://dl.k8s.io/release/$(curl -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    chmod +x kubectl
+    sudo mv kubectl /usr/local/bin/
+}
+
+install_kind() {
+    log "Installing kind..."
+    curl -Lo kind https://kind.sigs.k8s.io/dl/latest/kind-linux-amd64
+    chmod +x kind
+    sudo mv kind /usr/local/bin/
+}
+
+install_helm() {
+    log "Installing Helm..."
+    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+}
+
+install_jq() {
+    log "Installing jq..."
+    sudo apt update
+    sudo apt install -y jq
+}
+
+# --------------------------
+# Step 1: Ensure dependencies
+# --------------------------
+log "Checking dependencies..."
+
+command -v docker >/dev/null || install_docker
+command -v kubectl >/dev/null || install_kubectl
+command -v kind >/dev/null || install_kind
+command -v helm >/dev/null || install_helm
+command -v jq >/dev/null || install_jq
+
+success "All tools available"
+
+# --------------------------
+# Step 2: Ensure Docker running
+# --------------------------
+if ! docker info >/dev/null 2>&1; then
+    warn "Docker not running. Starting..."
+    sudo systemctl start docker
+fi
+
+# --------------------------
+# Step 3: Cleanup (safe)
+# --------------------------
+log "Cleaning old cluster..."
 kind delete cluster --name "$CLUSTER_NAME" || true
-docker ps -aq | xargs -r docker rm -f
-docker network prune -f
-docker system prune -af
-echo "✅ Cleanup complete"
+success "Old cluster removed"
 
-# ------------------- Step 2: Validate tools -------------------
-for tool in docker kubectl kind helm jq; do
-    if ! command -v "$tool" &>/dev/null; then
-        echo "❌ $tool not found. Install it before running."
-        exit 1
-    else
-        echo "✅ $tool installed"
-    fi
-done
-
-# ------------------- Step 3: Pull Golang image -------------------
-echo "⬇️ Pulling Golang image to avoid Docker Hub rate limit..."
+# --------------------------
+# Step 4: Pull base images
+# --------------------------
+log "Pulling required images..."
 docker pull golang:1.21
-
-# ------------------- Step 4: Load Golang image into Kind cluster -------------------
-echo "🐳 Loading Golang image into Kind cluster..."
-kind load docker-image golang:1.21 --name "$CLUSTER_NAME"
-
-# ------------------- Step 5: Pull Kind image -------------------
-echo "⬇️ Pulling Kind node image..."
 docker pull kindest/node:v1.29.2
 
-# ------------------- Step 6: Create Kind cluster -------------------
-echo "🚀 Creating Kind multi-node cluster..."
-kind create cluster --name "$CLUSTER_NAME" --config "$CLUSTER_YAML" --wait 90s
+# --------------------------
+# Step 5: Create cluster
+# --------------------------
+log "Creating Kind cluster..."
+kind create cluster \
+  --name "$CLUSTER_NAME" \
+  --config "$CLUSTER_YAML" \
+  --wait 120s
 
-# ------------------- Step 7: Setup CNI plugins -------------------
-echo "📦 Copying Cilium CNI plugins into Kind nodes..."
-for node in $(kind get nodes --name "$CLUSTER_NAME"); do
-    docker exec "$node" mkdir -p /opt/cni/bin
-    # Copy each binary individually if exists
-    for plugin in "$PROJECT_ROOT/cluster/cni-plugins/"*; do
-        if [ -f "$plugin" ]; then
-            docker cp "$plugin" "$node":/opt/cni/bin/
-        fi
-    done
-    docker exec "$node" chmod +x /opt/cni/bin/* || echo "⚠️ No binaries found to chmod"
-done
+success "Cluster created"
 
-# ------------------- Step 8: Load kernel modules & sysctl -------------------
-echo "🔧 Loading kernel modules for networking..."
-sudo modprobe br_netfilter overlay
-sudo sysctl net.bridge.bridge-nf-call-iptables=1
-sudo sysctl net.bridge.bridge-nf-call-ip6tables=1
+# --------------------------
+# Step 6: Load images into cluster
+# --------------------------
+log "Loading images into Kind..."
+kind load docker-image golang:1.21 --name "$CLUSTER_NAME"
 
-# ------------------- Step 9: Install Cilium CNI -------------------
-echo "🌐 Installing Cilium CNI..."
-kubectl apply -f https://github.com/cilium/cilium/releases/download/v1.19.1/cilium-operator.yaml
-kubectl apply -f https://github.com/cilium/cilium/releases/download/v1.19.1/cilium-cni.yaml
+# --------------------------
+# Step 7: Kernel setup
+# --------------------------
+log "Configuring kernel modules..."
+sudo modprobe br_netfilter overlay || true
+sudo sysctl -w net.bridge.bridge-nf-call-iptables=1
+sudo sysctl -w net.bridge.bridge-nf-call-ip6tables=1
 
-echo "⏳ Waiting for all nodes to be Ready..."
+# --------------------------
+# Step 8: Install Cilium (Helm)
+# --------------------------
+log "Installing Cilium..."
+
+helm repo add cilium https://helm.cilium.io/ || true
+helm repo update
+
+kubectl create namespace kube-system --dry-run=client -o yaml | kubectl apply -f -
+
+helm upgrade --install cilium cilium/cilium \
+  --version 1.19.1 \
+  -n kube-system
+
+# Wait for nodes
+log "Waiting for nodes..."
 kubectl wait --for=condition=Ready nodes --all --timeout=180s
-kubectl get nodes -o wide
 
-# ------------------- Step 10: Build & Load Docker images -------------------
-echo "🐳 Building microservice image..."
+# Wait for Cilium pods
+log "Waiting for Cilium pods..."
+kubectl -n kube-system wait --for=condition=Ready pod -l k8s-app=cilium --timeout=300s
+
+success "Cilium installed"
+
+# --------------------------
+# Step 9: Build app image
+# --------------------------
+log "Building microservice..."
 docker build -t microservice:latest "$PROJECT_ROOT/microservices"
 kind load docker-image microservice:latest --name "$CLUSTER_NAME"
 
-# ------------------- Step 11: Deploy Microservices -------------------
-echo "🚀 Deploying microservices..."
-kubectl apply -f "$PROJECT_ROOT/k8s-manifests/service-c.yaml"
-kubectl apply -f "$PROJECT_ROOT/k8s-manifests/service-c-svc.yaml"
-kubectl wait --for=condition=Ready pod -l app=service-c --timeout=120s
+# --------------------------
+# Step 10: Deploy services
+# --------------------------
+log "Deploying microservices..."
 
-kubectl apply -f "$PROJECT_ROOT/k8s-manifests/service-b.yaml"
-kubectl apply -f "$PROJECT_ROOT/k8s-manifests/service-b-svc.yaml"
-kubectl wait --for=condition=Ready pod -l app=service-b --timeout=120s
+kubectl apply -f "$PROJECT_ROOT/k8s-manifests/"
 
-kubectl apply -f "$PROJECT_ROOT/k8s-manifests/service-a.yaml"
-kubectl wait --for=condition=Ready pod -l app=service-a --timeout=120s
+kubectl wait --for=condition=Ready pod --all --timeout=180s
 
-# ------------------- Step 12: Port-forward Service A -------------------
-echo "🔌 Port-forwarding Service A to localhost:8080..."
-kubectl port-forward svc/service-a 8080:80 > /dev/null 2>&1 &
+# --------------------------
+# Step 11: Port forward
+# --------------------------
+log "Port-forwarding service..."
+kubectl port-forward svc/service-a 8080:80 >/dev/null 2>&1 &
+
 sleep 5
 
-echo "🔍 Testing service chain..."
-curl -s http://localhost:8080
-echo ""
+log "Testing service..."
+curl -s http://localhost:8080 || warn "Service test failed"
 
-# ------------------- Step 13: Helm + Prometheus/Grafana -------------------
-echo "🔥 Installing Prometheus & Grafana..."
+# --------------------------
+# Step 12: Monitoring stack
+# --------------------------
+log "Installing Prometheus stack..."
+
 kubectl create ns monitoring --dry-run=client -o yaml | kubectl apply -f -
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update --timeout 60s
-helm install monitoring prometheus-community/kube-prometheus-stack -n monitoring || echo "✅ Already installed"
 
-# Wait for Prometheus pod to be Ready
-kubectl wait --for=condition=Ready pod \
-  -l app.kubernetes.io/name=prometheus \
-  -n monitoring \
-  --timeout=300s
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
+helm repo update
 
-PROM_POD=$(kubectl get pods -n monitoring \
-  -l app.kubernetes.io/name=prometheus \
-  -o jsonpath='{.items[0].metadata.name}')
+helm upgrade --install monitoring prometheus-community/kube-prometheus-stack -n monitoring
 
-# Port-forward Prometheus
-kubectl port-forward -n monitoring "$PROM_POD" 9090:9090 > /dev/null 2>&1 &
-export PROM_URL="http://localhost:9090"
-echo "✅ Prometheus port-forwarded to localhost:9090"
+success "Monitoring installed"
 
-# ------------------- Step 14: CSV header setup -------------------
+# --------------------------
+# Step 13: Results file
+# --------------------------
 if [ ! -f "$RESULTS_FILE" ]; then
-    echo "Timestamp,Users,Requestpersec,Percentile95_latency_ms,Cpu_pods,Memory_pods,Cpu_nodes,Memory_nodes,Ping_intra_ms,Ping_inter_ms,Bandwidth_mbps" > "$RESULTS_FILE"
+    echo "Timestamp,Users,RPS,P95_latency,Cpu_pods,Mem_pods,Cpu_nodes,Mem_nodes" > "$RESULTS_FILE"
 fi
 
-# ------------------- Step 15: Locust load tests -------------------
+# --------------------------
+# Step 14: Load testing
+# --------------------------
+log "Starting load tests..."
+
 USER_LEVELS=(50 100 200 300 400)
 SPAWN_RATE=10
 RUN_TIME="1m"
 
-LOCUST_DIR="$PROJECT_ROOT/load-test"
-export PATH="$PATH:$HOME/.local/bin"
-sed -i '1i Timestamp,Users,Requestpersec,Percentile95_latency_ms,Cpu_pods,Memory_pods,Cpu_nodes,Memory_nodes,Ping_intra_ms,Ping_inter_ms,Bandwidth_mbps' $RESULTS_FILE
+cd "$PROJECT_ROOT/load-test"
 
-cd "$LOCUST_DIR"
 for USERS in "${USER_LEVELS[@]}"; do
-    echo "========================================"
-    echo "🚀 Running test with $USERS users"
-    echo "========================================"
+    log "Running test: $USERS users"
 
     locust -f locustfile.py \
       --host=http://localhost:8080 \
@@ -148,10 +207,7 @@ for USERS in "${USER_LEVELS[@]}"; do
       -u "$USERS" \
       -r "$SPAWN_RATE" \
       --run-time "$RUN_TIME" \
-      --csv=locust_stats
-
-    echo "📊 Collecting metrics..."
-    sudo "$PROJECT_ROOT/scripts/flannelmetrics.sh" "$USERS"
+      --csv=locust_stats || warn "Locust failed"
 done
 
-echo "🎉 All tests complete!"
+success "All tests complete 🎉"
