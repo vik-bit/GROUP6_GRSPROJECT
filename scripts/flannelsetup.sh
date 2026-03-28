@@ -202,7 +202,7 @@ for USERS in "${USER_LEVELS[@]}"; do
       
     
     # Run your metrics collection script
-    sudo "$PROJECT_ROOT/scripts/flannelmetrics.sh" "$USERS"
+    sudo "$PROJECT_ROOT/scripts/metrics.sh" "$USERS"
 
     echo "✅ Completed test for $USERS users"
     echo ""

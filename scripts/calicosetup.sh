@@ -91,22 +91,50 @@ echo "🔍 Testing service chain..."
 curl -s http://localhost:8080
 echo ""
 
-# ------------------- Step 11: Helm + Prometheus/Grafana -------------------
+# ------------------- Step 11: Helm + Prometheus/Grafana (Dynamic) -------------------
 echo "🔥 Installing Prometheus & Grafana..."
 kubectl create ns monitoring --dry-run=client -o yaml | kubectl apply -f -
+
+# Add repo and update (increase timeout to avoid network issues)
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
-helm install monitoring prometheus-community/kube-prometheus-stack -n monitoring || echo "✅ Already installed"
+helm repo update --timeout 60s
 
-# Wait for Prometheus pod to be Ready
-PROM_POD=$(kubectl get pods -n monitoring -l app.kubernetes.io/name=prometheus,app.kubernetes.io/instance=monitoring -o jsonpath='{.items[0].metadata.name}')
-echo "⏳ Waiting for Prometheus pod ($PROM_POD) to be Ready..."
-kubectl wait --for=condition=Ready pod -n monitoring "$PROM_POD" --timeout=180s
+# Install or upgrade kube-prometheus-stack
+helm upgrade --install monitoring prometheus-community/kube-prometheus-stack -n monitoring --wait || echo "✅ Already installed"
 
-# Port-forward Prometheus
-kubectl port-forward -n monitoring "$PROM_POD" 9090:9090 > /dev/null 2>&1 &
-export PROM_URL="http://localhost:9090"
-echo "✅ Prometheus port-forwarded to localhost:9090"
+echo "⏳ Waiting for all pods in monitoring namespace to be Ready..."
+kubectl wait --for=condition=Ready pod -n monitoring --all --timeout=300s
+
+# ------------------- Prometheus -------------------
+# Dynamically find Prometheus pod
+PROM_POD=$(kubectl get pods -n monitoring -o jsonpath='{.items[?(@.metadata.name contains "prometheus")].metadata.name}' | head -n1)
+
+if [[ -z "$PROM_POD" ]]; then
+    echo "❌ Prometheus pod not found!"
+else
+    echo "📊 Prometheus pod: $PROM_POD"
+    kubectl port-forward -n monitoring "$PROM_POD" 9090:9090 > /dev/null 2>&1 &
+    export PROM_URL="http://localhost:9090"
+    echo "✅ Prometheus port-forwarded to localhost:9090"
+fi
+
+# ------------------- Grafana -------------------
+# Dynamically find Grafana pod
+GRAFANA_POD=$(kubectl get pods -n monitoring -o jsonpath='{.items[?(@.metadata.name contains "grafana")].metadata.name}' | head -n1)
+
+if [[ -z "$GRAFANA_POD" ]]; then
+    echo "❌ Grafana pod not found!"
+else
+    echo "📊 Grafana pod: $GRAFANA_POD"
+    kubectl port-forward -n monitoring "$GRAFANA_POD" 3000:3000 > /dev/null 2>&1 &
+    echo "✅ Grafana port-forwarded to localhost:3000"
+
+    # Try to get Grafana admin password dynamically
+    GRAFANA_PASS=$(kubectl get secret -n monitoring "$GRAFANA_POD" -o jsonpath="{.data.admin-password}" 2>/dev/null || \
+    kubectl get secret -n monitoring -l app.kubernetes.io/component=admin-secret -o jsonpath="{.items[0].data.admin-password}")
+    GRAFANA_PASS=$(echo "$GRAFANA_PASS" | base64 --decode)
+    echo "🔑 Grafana admin password: $GRAFANA_PASS"
+fi
 
 # ------------------- Step 12: CSV header setup -------------------
 if [ ! -f "$RESULTS_FILE" ]; then
@@ -120,6 +148,7 @@ RUN_TIME="1m"
 
 LOCUST_DIR="$PROJECT_ROOT/load-test"
 export PATH="$PATH:$HOME/.local/bin"
+sed -i '1i Timestamp,Users,Requestpersec,Percentile95_latency_ms,Cpu_pods,Memory_pods,Cpu_nodes,Memory_nodes,Ping_intra_ms,Ping_inter_ms,Bandwidth_mbps' $RESULTS_FILE
 
 cd "$LOCUST_DIR"
 for USERS in "${USER_LEVELS[@]}"; do
@@ -136,7 +165,7 @@ for USERS in "${USER_LEVELS[@]}"; do
       --csv=locust_stats
 
     echo "📊 Collecting metrics..."
-    sudo "$PROJECT_ROOT/scripts/flannelmetrics.sh" "$USERS"
+    sudo "$PROJECT_ROOT/scripts/metrics.sh" "$USERS"
 done
 
 echo "🎉 All tests complete!"

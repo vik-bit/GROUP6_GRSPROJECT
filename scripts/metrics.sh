@@ -29,7 +29,8 @@ query_prometheus() {
 echo "📊 Collecting metrics..."
 
 # ------------------- Config -------------------
-USERS=50
+USERS=$1
+echo "Collecting metrics for $USERS users..."
 
 # ------------------- Ensure CSV exists -------------------
 if [ ! -f "$RESULTS_FILE" ]; then
