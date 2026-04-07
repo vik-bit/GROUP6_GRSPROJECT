@@ -120,24 +120,33 @@ sudo sysctl -w net.bridge.bridge-nf-call-ip6tables=1
 # --------------------------
 log "Installing Cilium..."
 
-helm repo add cilium https://helm.cilium.io/ || true
-helm repo update
+log "Installing Cilium via CLI..."
 
-kubectl create namespace kube-system --dry-run=client -o yaml | kubectl apply -f -
+# Ensure CLI exists
+if ! command -v cilium >/dev/null; then
+    log "Installing Cilium CLI..."
 
-helm upgrade --install cilium cilium/cilium \
+    CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
+    CLI_ARCH=amd64
+    [ "$(uname -m)" = "aarch64" ] && CLI_ARCH=arm64
+
+    curl -L --fail --remote-name-all \
+      https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum}
+
+    sha256sum --check cilium-linux-${CLI_ARCH}.tar.gz.sha256sum
+    sudo tar xzvfC cilium-linux-${CLI_ARCH}.tar.gz /usr/local/bin
+    rm cilium-linux-${CLI_ARCH}.tar.gz*
+fi
+
+# Install Cilium WITHOUT Helm repo dependency
+cilium install \
   --version 1.19.1 \
-  -n kube-system
+  --set kubeProxyReplacement=true
 
-# Wait for nodes
-log "Waiting for nodes..."
-kubectl wait --for=condition=Ready nodes --all --timeout=180s
+log "Waiting for Cilium..."
+cilium status --wait
 
-# Wait for Cilium pods
-log "Waiting for Cilium pods..."
-kubectl -n kube-system wait --for=condition=Ready pod -l k8s-app=cilium --timeout=300s
-
-success "Cilium installed"
+success "Cilium installed successfully"
 
 # --------------------------
 # Step 9: Build app image
@@ -187,19 +196,20 @@ if [ ! -f "$RESULTS_FILE" ]; then
     echo "Timestamp,Users,RPS,P95_latency,Cpu_pods,Mem_pods,Cpu_nodes,Mem_nodes" > "$RESULTS_FILE"
 fi
 
-# --------------------------
-# Step 14: Load testing
-# --------------------------
-log "Starting load tests..."
-
+# ------------------- Step 14: Locust load tests -------------------
 USER_LEVELS=(50 100 200 300 400)
 SPAWN_RATE=10
 RUN_TIME="1m"
 
-cd "$PROJECT_ROOT/load-test"
+LOCUST_DIR="$PROJECT_ROOT/load-test"
+export PATH="$PATH:$HOME/.local/bin"
 
+
+cd "$LOCUST_DIR"
 for USERS in "${USER_LEVELS[@]}"; do
-    log "Running test: $USERS users"
+    echo "========================================"
+    echo "🚀 Running test with $USERS users"
+    echo "========================================"
 
     locust -f locustfile.py \
       --host=http://localhost:8080 \
@@ -207,7 +217,10 @@ for USERS in "${USER_LEVELS[@]}"; do
       -u "$USERS" \
       -r "$SPAWN_RATE" \
       --run-time "$RUN_TIME" \
-      --csv=locust_stats || warn "Locust failed"
+      --csv=locust_stats
+
+    echo "📊 Collecting metrics..."
+    sudo "$PROJECT_ROOT/scripts/metrics.sh" "$USERS" 
 done
 
-success "All tests complete 🎉"
+echo "🎉 All tests complete!"
