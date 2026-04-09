@@ -1,58 +1,5 @@
-﻿
 
----
-
-````
-
-This project benchmarks Kubernetes networking using three Container Network Interface (CNI) plugins:
-
-- **Calico**
-- **Flannel**
-- **Cilium** (currently under testing)
-
-Microservices are deployed on a local Kind cluster, and load is generated via **Locust**.  
-Performance metrics are recorded in CSV files for graphing and analysis.
-
----
-
-## Repository Setup
-
-To get started, clone the project repository:
-
-```bash
-git clone https://github.com/vik-bit/GROUP6_GRSPROJECT.git
-cd GROUP6_GRSPROJECT
-````
-
----
-
-## Usage
-
-### Set executable permissions on setup scripts (first time only)
-
-> It is **not mandatory** to run these scripts — data can be accessed directly from the CSV files.
-> However, if you want to see how the setup works or tweak it, follow these steps:
-
-```bash
-cd scripts
-
-# Calico setup
-chmod +x ./calicosetup.sh
-sudo ./calicosetup.sh
-
-# Cilium setup (under testing)
-chmod +x ./ciliumsetup.sh
-sudo ./ciliumsetup.sh
-
-# Flannel setup
-chmod +x ./flannelsetup.sh
-sudo ./flannelsetup.sh
-
-Perfect — here is your **finalized, polished README** with your exact instructions, the repo clone link, clear guidance about the CSV data, and everything cleanly formatted:
-
----
-
-````markdown id="q9chg3"
+````markdown
 # CNI Benchmark Project
 
 This project benchmarks Kubernetes networking using three Container Network Interface (CNI) plugins:
@@ -61,7 +8,7 @@ This project benchmarks Kubernetes networking using three Container Network Inte
 - **Flannel**
 - **Cilium** (currently under testing)
 
-Microservices are deployed on a local Kind cluster, and load is generated via **Locust**.  
+Microservices are deployed on a local **Kind** cluster, and load is generated via **Locust**.  
 Performance metrics are recorded in CSV files for graphing and analysis.
 
 ---
@@ -75,10 +22,12 @@ git clone https://github.com/vik-bit/GROUP6_GRSPROJECT.git
 cd GROUP6_GRSPROJECT
 ````
 
-### Set executable permissions on setup scripts (first time only)
+---
+
+### Set Executable Permissions on Setup Scripts (First Time Only)
 
 > It is **not mandatory** to run these scripts — data can be accessed directly from the CSV files.
-> However, if you want to see how the setup works or tweak it, follow these steps:
+> However, if you want to see the full setup process or tweak configurations, follow these steps:
 
 ```bash
 cd scripts
@@ -95,28 +44,27 @@ sudo ./ciliumsetup.sh
 chmod +x ./flannelsetup.sh
 sudo ./flannelsetup.sh
 
-# Metrics collector
+# Metrics collector (permission change only, integrated in setup scripts)
 chmod +x ./metrics.sh
 ```
 
-> Use `sudo` when running the scripts, as they require privileges to configure networking, system modules, Docker, and Kubernetes.
-> Metrics collector is already implemented inside the setup scripts , dont run it separately. But yes change its permission as described above.
+> **Note:** Use `sudo` as scripts require privileges to configure networking, system modules, Docker, and Kubernetes.
+> The metrics collector is already included in the setup scripts — do not run it separately.
 
 ---
 
-### Running Load Tests
+## Running Load Tests
 
 After cluster setup and microservices deployment, load tests are executed via **Locust**.
 
 Load test results are appended to CSV files in the project root:
 
-* `calicoresults.csv` — contains benchmark data for **Calico**
-* `flannelresults.csv` — contains benchmark data for **Flannel**
+* `calicoresults.csv` — benchmark data for **Calico**
+* `flannelresults.csv` — benchmark data for **Flannel**
 * `ciliumresults.csv` — **currently under testing; data not available yet**
 
-These CSV files hold the **real measured performance metrics** and are intended for graphing (preferably using Python) and detailed analysis.
-
-All graphing scripts (`.py` files) should be placed inside the `plots/` folder.
+These CSV files contain **real measured performance metrics** for graphing (using Python) and detailed analysis.
+All graphing scripts (`.py`) should be placed inside the `plots/` folder.
 
 ---
 
@@ -128,9 +76,9 @@ All graphing scripts (`.py` files) should be placed inside the `plots/` folder.
 | **Users**                   | Number of simulated concurrent users              |
 | **Requestpersec (RPS)**     | Throughput — Requests per second handled          |
 | **Percentile95_latency_ms** | 95th percentile of response latency (in ms)       |
-| **Cpu_pods**                | Aggregate CPU usage of pods                       |
+| **CPU_pods**                | Aggregate CPU usage of pods                       |
 | **Memory_pods**             | Aggregate memory usage of pods (MB)               |
-| **Cpu_nodes**               | CPU usage on Kind nodes                           |
+| **CPU_nodes**               | CPU usage on Kind nodes                           |
 | **Memory_nodes**            | Memory usage on Kind nodes (MB)                   |
 | **Ping_intra_ms**           | Latency inside a node (pod-to-pod same node)      |
 | **Ping_inter_ms**           | Latency across nodes (pod-to-pod different nodes) |
@@ -140,12 +88,15 @@ All graphing scripts (`.py` files) should be placed inside the `plots/` folder.
 
 ## Notes
 
-* Setup scripts **clean up old Kind clusters and Docker artifacts** before fresh deployment.
-* Prometheus and Grafana monitoring stacks are deployed via Helm in the `monitoring` namespace.
+* Setup scripts **clean up old Kind clusters and Docker artifacts** before a fresh deployment.
+
+* Prometheus and Grafana monitoring stacks are deployed via **Helm** in the `monitoring` namespace.
+
 * Port forwarding is configured automatically:
 
   * Prometheus → `localhost:9090`
   * Grafana → `localhost:3000`
+
 * You can customize user loads and test durations directly within the setup scripts.
 
 ---
@@ -163,5 +114,8 @@ Please clearly document any additions or changes.
 
 ---
 
-**Happy benchmarking! 🚀**
+## Happy Benchmarking! 🚀
+
+> Leverage this setup to evaluate CNI performance, visualize trends, and understand Kubernetes network behavior in small to medium clusters.
+
 
