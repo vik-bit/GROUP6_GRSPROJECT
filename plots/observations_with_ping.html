@@ -1,0 +1,222 @@
+<html><head><title>Qualitative Observations with Ping</title></head><body><h1>Qualitative Observations & Tables (Including Ping)</h1><h2>Comparison: Cilium vs Calico</h2><h3>Trend Table</h3><table border='1' style='border-collapse: collapse;'>
+<tr>
+<td style='padding:5px; '>Metric</td><td style='padding:5px; '>Cilium</td><td style='padding:5px; '>Calico</td></tr>
+<tr>
+<td style='padding:5px; '>Latency</td><td style='padding:5px; background-color:white'>increasing steadily</td><td style='padding:5px; background-color:white'>increasing steadily</td></tr>
+<tr>
+<td style='padding:5px; '>Bandwidth</td><td style='padding:5px; background-color:yellow' title='Spike detected; check specific user loads'>mostly stable with spike(s) at user(s) 400</td><td style='padding:5px; background-color:yellow' title='Spike detected; check specific user loads'>mostly stable with spike(s) at user(s) 100</td></tr>
+<tr>
+<td style='padding:5px; '>CPU_pod</td><td style='padding:5px; background-color:white'>increasing steadily</td><td style='padding:5px; background-color:white'>increasing steadily</td></tr>
+<tr>
+<td style='padding:5px; '>Memory_pod</td><td style='padding:5px; background-color:white'>increasing steadily</td><td style='padding:5px; background-color:white'>increasing steadily</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_intra</td><td style='padding:5px; background-color:yellow' title='Spike detected; check specific user loads'>fluctuates mildly</td><td style='padding:5px; background-color:yellow' title='Spike detected; check specific user loads'>mostly stable with spike(s) at user(s) 200, 300</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_inter</td><td style='padding:5px; background-color:yellow' title='Spike detected; check specific user loads'>mostly stable with spike(s) at user(s) 200</td><td style='padding:5px; background-color:yellow' title='Spike detected; check specific user loads'>mostly stable with spike(s) at user(s) 400</td></tr>
+</table>
+<br>
+<h3>Best/Worst Table</h3><table border='1' style='border-collapse: collapse;'>
+<tr>
+<td style='padding:5px; '>Metric</td><td style='padding:5px; '>Best CNI</td><td style='padding:5px; '>Worst CNI</td></tr>
+<tr>
+<td style='padding:5px; '>Latency</td><td style='padding:5px; background-color:lightgreen'>Flannel</td><td style='padding:5px; background-color:lightcoral'>Cilium</td></tr>
+<tr>
+<td style='padding:5px; '>Bandwidth</td><td style='padding:5px; background-color:lightgreen'>Cilium</td><td style='padding:5px; background-color:lightcoral'>Flannel</td></tr>
+<tr>
+<td style='padding:5px; '>CPU_pod</td><td style='padding:5px; background-color:lightgreen'>Flannel</td><td style='padding:5px; background-color:lightcoral'>Calico</td></tr>
+<tr>
+<td style='padding:5px; '>Memory_pod</td><td style='padding:5px; background-color:lightgreen'>Flannel</td><td style='padding:5px; background-color:lightcoral'>Cilium</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_intra</td><td style='padding:5px; background-color:lightgreen'>Flannel</td><td style='padding:5px; background-color:lightcoral'>Calico</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_inter</td><td style='padding:5px; background-color:lightgreen'>Cilium</td><td style='padding:5px; background-color:lightcoral'>Calico</td></tr>
+</table>
+<br>
+<h3>Scaling Impact Table</h3><table border='1' style='border-collapse: collapse;'>
+<tr>
+<td style='padding:5px; '>Metric</td><td style='padding:5px; '>Cilium</td><td style='padding:5px; '>Calico</td></tr>
+<tr>
+<td style='padding:5px; '>Latency</td><td style='padding:5px; background-color:yellow'>scaling shows spike/drop</td><td style='padding:5px; background-color:yellow'>scaling shows spike/drop</td></tr>
+<tr>
+<td style='padding:5px; '>Bandwidth</td><td style='padding:5px; background-color:lightgreen'>handles scaling well</td><td style='padding:5px; background-color:lightgreen'>handles scaling well</td></tr>
+<tr>
+<td style='padding:5px; '>CPU_pod</td><td style='padding:5px; '>data NA</td><td style='padding:5px; background-color:yellow'>scaling shows spike/drop</td></tr>
+<tr>
+<td style='padding:5px; '>Memory_pod</td><td style='padding:5px; '>data NA</td><td style='padding:5px; background-color:lightgreen'>handles scaling well</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_intra</td><td style='padding:5px; background-color:lightgreen'>handles scaling well</td><td style='padding:5px; background-color:lightgreen'>handles scaling well</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_inter</td><td style='padding:5px; background-color:lightgreen'>handles scaling well</td><td style='padding:5px; background-color:lightgreen'>handles scaling well</td></tr>
+</table>
+<br>
+<h3>Behavior/Tradeoff Table</h3><table border='1' style='border-collapse: collapse;'>
+<tr>
+<td style='padding:5px; '>Metric</td><td style='padding:5px; '>Cilium</td><td style='padding:5px; '>Calico</td></tr>
+<tr>
+<td style='padding:5px; '>Latency</td><td style='padding:5px; background-color:lightgreen'>Cilium behaves predictably</td><td style='padding:5px; background-color:lightgreen'>Calico behaves predictably</td></tr>
+<tr>
+<td style='padding:5px; '>Bandwidth</td><td style='padding:5px; background-color:yellow'>Cilium stable at low users, trend changes at high users</td><td style='padding:5px; background-color:yellow'>Calico stable at low users, trend changes at high users</td></tr>
+<tr>
+<td style='padding:5px; '>CPU_pod</td><td style='padding:5px; background-color:lightgreen'>Cilium behaves predictably</td><td style='padding:5px; background-color:lightgreen'>Calico behaves predictably</td></tr>
+<tr>
+<td style='padding:5px; '>Memory_pod</td><td style='padding:5px; background-color:lightgreen'>Cilium behaves predictably</td><td style='padding:5px; background-color:lightgreen'>Calico behaves predictably</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_intra</td><td style='padding:5px; background-color:yellow'>Cilium stable at low users, trend changes at high users</td><td style='padding:5px; background-color:yellow'>Calico stable at low users, trend changes at high users</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_inter</td><td style='padding:5px; background-color:yellow'>Cilium stable at low users, trend changes at high users</td><td style='padding:5px; background-color:yellow'>Calico stable at low users, trend changes at high users</td></tr>
+</table>
+<br>
+<h2>Comparison: Cilium vs Flannel</h2><h3>Trend Table</h3><table border='1' style='border-collapse: collapse;'>
+<tr>
+<td style='padding:5px; '>Metric</td><td style='padding:5px; '>Cilium</td><td style='padding:5px; '>Flannel</td></tr>
+<tr>
+<td style='padding:5px; '>Latency</td><td style='padding:5px; background-color:white'>increasing steadily</td><td style='padding:5px; background-color:white'>increasing steadily</td></tr>
+<tr>
+<td style='padding:5px; '>Bandwidth</td><td style='padding:5px; background-color:yellow' title='Spike detected; check specific user loads'>mostly stable with spike(s) at user(s) 400</td><td style='padding:5px; background-color:yellow' title='Spike detected; check specific user loads'>fluctuates mildly</td></tr>
+<tr>
+<td style='padding:5px; '>CPU_pod</td><td style='padding:5px; background-color:white'>increasing steadily</td><td style='padding:5px; background-color:white'>increasing steadily</td></tr>
+<tr>
+<td style='padding:5px; '>Memory_pod</td><td style='padding:5px; background-color:white'>increasing steadily</td><td style='padding:5px; background-color:white'>increasing steadily</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_intra</td><td style='padding:5px; background-color:yellow' title='Spike detected; check specific user loads'>fluctuates mildly</td><td style='padding:5px; background-color:yellow' title='Spike detected; check specific user loads'>mostly stable with spike(s) at user(s) 200</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_inter</td><td style='padding:5px; background-color:yellow' title='Spike detected; check specific user loads'>mostly stable with spike(s) at user(s) 200</td><td style='padding:5px; background-color:yellow' title='Spike detected; check specific user loads'>mostly stable with spike(s) at user(s) 300</td></tr>
+</table>
+<br>
+<h3>Best/Worst Table</h3><table border='1' style='border-collapse: collapse;'>
+<tr>
+<td style='padding:5px; '>Metric</td><td style='padding:5px; '>Best CNI</td><td style='padding:5px; '>Worst CNI</td></tr>
+<tr>
+<td style='padding:5px; '>Latency</td><td style='padding:5px; background-color:lightgreen'>Flannel</td><td style='padding:5px; background-color:lightcoral'>Cilium</td></tr>
+<tr>
+<td style='padding:5px; '>Bandwidth</td><td style='padding:5px; background-color:lightgreen'>Cilium</td><td style='padding:5px; background-color:lightcoral'>Flannel</td></tr>
+<tr>
+<td style='padding:5px; '>CPU_pod</td><td style='padding:5px; background-color:lightgreen'>Flannel</td><td style='padding:5px; background-color:lightcoral'>Calico</td></tr>
+<tr>
+<td style='padding:5px; '>Memory_pod</td><td style='padding:5px; background-color:lightgreen'>Flannel</td><td style='padding:5px; background-color:lightcoral'>Cilium</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_intra</td><td style='padding:5px; background-color:lightgreen'>Flannel</td><td style='padding:5px; background-color:lightcoral'>Calico</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_inter</td><td style='padding:5px; background-color:lightgreen'>Cilium</td><td style='padding:5px; background-color:lightcoral'>Calico</td></tr>
+</table>
+<br>
+<h3>Scaling Impact Table</h3><table border='1' style='border-collapse: collapse;'>
+<tr>
+<td style='padding:5px; '>Metric</td><td style='padding:5px; '>Cilium</td><td style='padding:5px; '>Flannel</td></tr>
+<tr>
+<td style='padding:5px; '>Latency</td><td style='padding:5px; background-color:yellow'>scaling shows spike/drop</td><td style='padding:5px; background-color:yellow'>scaling shows spike/drop</td></tr>
+<tr>
+<td style='padding:5px; '>Bandwidth</td><td style='padding:5px; background-color:lightgreen'>handles scaling well</td><td style='padding:5px; background-color:lightgreen'>handles scaling well</td></tr>
+<tr>
+<td style='padding:5px; '>CPU_pod</td><td style='padding:5px; '>data NA</td><td style='padding:5px; '>data NA</td></tr>
+<tr>
+<td style='padding:5px; '>Memory_pod</td><td style='padding:5px; '>data NA</td><td style='padding:5px; '>data NA</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_intra</td><td style='padding:5px; background-color:lightgreen'>handles scaling well</td><td style='padding:5px; background-color:lightgreen'>handles scaling well</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_inter</td><td style='padding:5px; background-color:lightgreen'>handles scaling well</td><td style='padding:5px; background-color:lightgreen'>handles scaling well</td></tr>
+</table>
+<br>
+<h3>Behavior/Tradeoff Table</h3><table border='1' style='border-collapse: collapse;'>
+<tr>
+<td style='padding:5px; '>Metric</td><td style='padding:5px; '>Cilium</td><td style='padding:5px; '>Flannel</td></tr>
+<tr>
+<td style='padding:5px; '>Latency</td><td style='padding:5px; background-color:lightgreen'>Cilium behaves predictably</td><td style='padding:5px; background-color:lightgreen'>Flannel behaves predictably</td></tr>
+<tr>
+<td style='padding:5px; '>Bandwidth</td><td style='padding:5px; background-color:yellow'>Cilium stable at low users, trend changes at high users</td><td style='padding:5px; background-color:yellow'>Flannel stable at low users, trend changes at high users</td></tr>
+<tr>
+<td style='padding:5px; '>CPU_pod</td><td style='padding:5px; background-color:lightgreen'>Cilium behaves predictably</td><td style='padding:5px; background-color:lightgreen'>Flannel behaves predictably</td></tr>
+<tr>
+<td style='padding:5px; '>Memory_pod</td><td style='padding:5px; background-color:lightgreen'>Cilium behaves predictably</td><td style='padding:5px; background-color:lightgreen'>Flannel behaves predictably</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_intra</td><td style='padding:5px; background-color:yellow'>Cilium stable at low users, trend changes at high users</td><td style='padding:5px; background-color:yellow'>Flannel stable at low users, trend changes at high users</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_inter</td><td style='padding:5px; background-color:yellow'>Cilium stable at low users, trend changes at high users</td><td style='padding:5px; background-color:yellow'>Flannel stable at low users, trend changes at high users</td></tr>
+</table>
+<br>
+<h2>Comparison: Calico vs Flannel</h2><h3>Trend Table</h3><table border='1' style='border-collapse: collapse;'>
+<tr>
+<td style='padding:5px; '>Metric</td><td style='padding:5px; '>Calico</td><td style='padding:5px; '>Flannel</td></tr>
+<tr>
+<td style='padding:5px; '>Latency</td><td style='padding:5px; background-color:white'>increasing steadily</td><td style='padding:5px; background-color:white'>increasing steadily</td></tr>
+<tr>
+<td style='padding:5px; '>Bandwidth</td><td style='padding:5px; background-color:yellow' title='Spike detected; check specific user loads'>mostly stable with spike(s) at user(s) 100</td><td style='padding:5px; background-color:yellow' title='Spike detected; check specific user loads'>fluctuates mildly</td></tr>
+<tr>
+<td style='padding:5px; '>CPU_pod</td><td style='padding:5px; background-color:white'>increasing steadily</td><td style='padding:5px; background-color:white'>increasing steadily</td></tr>
+<tr>
+<td style='padding:5px; '>Memory_pod</td><td style='padding:5px; background-color:white'>increasing steadily</td><td style='padding:5px; background-color:white'>increasing steadily</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_intra</td><td style='padding:5px; background-color:yellow' title='Spike detected; check specific user loads'>mostly stable with spike(s) at user(s) 200, 300</td><td style='padding:5px; background-color:yellow' title='Spike detected; check specific user loads'>mostly stable with spike(s) at user(s) 200</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_inter</td><td style='padding:5px; background-color:yellow' title='Spike detected; check specific user loads'>mostly stable with spike(s) at user(s) 400</td><td style='padding:5px; background-color:yellow' title='Spike detected; check specific user loads'>mostly stable with spike(s) at user(s) 300</td></tr>
+</table>
+<br>
+<h3>Best/Worst Table</h3><table border='1' style='border-collapse: collapse;'>
+<tr>
+<td style='padding:5px; '>Metric</td><td style='padding:5px; '>Best CNI</td><td style='padding:5px; '>Worst CNI</td></tr>
+<tr>
+<td style='padding:5px; '>Latency</td><td style='padding:5px; background-color:lightgreen'>Flannel</td><td style='padding:5px; background-color:lightcoral'>Cilium</td></tr>
+<tr>
+<td style='padding:5px; '>Bandwidth</td><td style='padding:5px; background-color:lightgreen'>Cilium</td><td style='padding:5px; background-color:lightcoral'>Flannel</td></tr>
+<tr>
+<td style='padding:5px; '>CPU_pod</td><td style='padding:5px; background-color:lightgreen'>Flannel</td><td style='padding:5px; background-color:lightcoral'>Calico</td></tr>
+<tr>
+<td style='padding:5px; '>Memory_pod</td><td style='padding:5px; background-color:lightgreen'>Flannel</td><td style='padding:5px; background-color:lightcoral'>Cilium</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_intra</td><td style='padding:5px; background-color:lightgreen'>Flannel</td><td style='padding:5px; background-color:lightcoral'>Calico</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_inter</td><td style='padding:5px; background-color:lightgreen'>Cilium</td><td style='padding:5px; background-color:lightcoral'>Calico</td></tr>
+</table>
+<br>
+<h3>Scaling Impact Table</h3><table border='1' style='border-collapse: collapse;'>
+<tr>
+<td style='padding:5px; '>Metric</td><td style='padding:5px; '>Calico</td><td style='padding:5px; '>Flannel</td></tr>
+<tr>
+<td style='padding:5px; '>Latency</td><td style='padding:5px; background-color:yellow'>scaling shows spike/drop</td><td style='padding:5px; background-color:yellow'>scaling shows spike/drop</td></tr>
+<tr>
+<td style='padding:5px; '>Bandwidth</td><td style='padding:5px; background-color:lightgreen'>handles scaling well</td><td style='padding:5px; background-color:lightgreen'>handles scaling well</td></tr>
+<tr>
+<td style='padding:5px; '>CPU_pod</td><td style='padding:5px; background-color:yellow'>scaling shows spike/drop</td><td style='padding:5px; '>data NA</td></tr>
+<tr>
+<td style='padding:5px; '>Memory_pod</td><td style='padding:5px; background-color:lightgreen'>handles scaling well</td><td style='padding:5px; '>data NA</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_intra</td><td style='padding:5px; background-color:lightgreen'>handles scaling well</td><td style='padding:5px; background-color:lightgreen'>handles scaling well</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_inter</td><td style='padding:5px; background-color:lightgreen'>handles scaling well</td><td style='padding:5px; background-color:lightgreen'>handles scaling well</td></tr>
+</table>
+<br>
+<h3>Behavior/Tradeoff Table</h3><table border='1' style='border-collapse: collapse;'>
+<tr>
+<td style='padding:5px; '>Metric</td><td style='padding:5px; '>Calico</td><td style='padding:5px; '>Flannel</td></tr>
+<tr>
+<td style='padding:5px; '>Latency</td><td style='padding:5px; background-color:lightgreen'>Calico behaves predictably</td><td style='padding:5px; background-color:lightgreen'>Flannel behaves predictably</td></tr>
+<tr>
+<td style='padding:5px; '>Bandwidth</td><td style='padding:5px; background-color:yellow'>Calico stable at low users, trend changes at high users</td><td style='padding:5px; background-color:yellow'>Flannel stable at low users, trend changes at high users</td></tr>
+<tr>
+<td style='padding:5px; '>CPU_pod</td><td style='padding:5px; background-color:lightgreen'>Calico behaves predictably</td><td style='padding:5px; background-color:lightgreen'>Flannel behaves predictably</td></tr>
+<tr>
+<td style='padding:5px; '>Memory_pod</td><td style='padding:5px; background-color:lightgreen'>Calico behaves predictably</td><td style='padding:5px; background-color:lightgreen'>Flannel behaves predictably</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_intra</td><td style='padding:5px; background-color:yellow'>Calico stable at low users, trend changes at high users</td><td style='padding:5px; background-color:yellow'>Flannel stable at low users, trend changes at high users</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_inter</td><td style='padding:5px; background-color:yellow'>Calico stable at low users, trend changes at high users</td><td style='padding:5px; background-color:yellow'>Flannel stable at low users, trend changes at high users</td></tr>
+</table>
+<br>
+<h2>Summary Table: All 3 CNIs</h2><table border='1' style='border-collapse: collapse;'>
+<tr>
+<td style='padding:5px; '>Metric</td><td style='padding:5px; '>Best Performer</td><td style='padding:5px; '>Most Stable</td><td style='padding:5px; '>Needs Attention</td></tr>
+<tr>
+<td style='padding:5px; '>Latency</td><td style='padding:5px; background-color:lightgreen'>Flannel</td><td style='padding:5px; background-color:lightblue'>Flannel</td><td style='padding:5px; background-color:lightcoral'>Cilium</td></tr>
+<tr>
+<td style='padding:5px; '>Bandwidth</td><td style='padding:5px; background-color:lightgreen'>Cilium</td><td style='padding:5px; background-color:lightblue'>Calico</td><td style='padding:5px; background-color:lightcoral'>Flannel</td></tr>
+<tr>
+<td style='padding:5px; '>CPU_pod</td><td style='padding:5px; background-color:lightgreen'>Flannel</td><td style='padding:5px; background-color:lightblue'>Calico</td><td style='padding:5px; background-color:lightcoral'>Calico</td></tr>
+<tr>
+<td style='padding:5px; '>Memory_pod</td><td style='padding:5px; background-color:lightgreen'>Flannel</td><td style='padding:5px; background-color:lightblue'>Calico</td><td style='padding:5px; background-color:lightcoral'>Cilium</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_intra</td><td style='padding:5px; background-color:lightgreen'>Flannel</td><td style='padding:5px; background-color:lightblue'>Cilium</td><td style='padding:5px; background-color:lightcoral'>Calico</td></tr>
+<tr>
+<td style='padding:5px; '>Ping_inter</td><td style='padding:5px; background-color:lightgreen'>Cilium</td><td style='padding:5px; background-color:lightblue'>Cilium</td><td style='padding:5px; background-color:lightcoral'>Calico</td></tr>
+</table>
+<br>
+</body></html>

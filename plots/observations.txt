@@ -1,0 +1,97 @@
+### Comparison: Cilium vs Calico
+
+Trend Table:
+Metric     | Cilium                                     | Calico                                    
+Latency    | increasing steadily                        | increasing steadily                       
+Bandwidth  | mostly stable with spike(s) at user(s) 400 | mostly stable with spike(s) at user(s) 100
+CPU_pod    | increasing steadily                        | increasing steadily                       
+Memory_pod | increasing steadily                        | increasing steadily                       
+
+Best/Worst Table:
+Metric     | Best CNI | Worst CNI
+Latency    | Calico   | Cilium   
+Bandwidth  | Cilium   | Calico   
+CPU_pod    | Cilium   | Calico   
+Memory_pod | Calico   | Cilium   
+
+Scaling Impact Table:
+Metric     | Cilium                   | Calico                  
+Latency    | scaling shows spike/drop | scaling shows spike/drop
+Bandwidth  | handles scaling well     | handles scaling well    
+CPU_pod    | data NA                  | scaling shows spike/drop
+Memory_pod | data NA                  | handles scaling well    
+
+Behavior/Tradeoff Table:
+Metric     | Cilium                                                  | Calico                                                 
+Latency    | Cilium behaves predictably                              | Calico behaves predictably                             
+Bandwidth  | Cilium stable at low users, trend changes at high users | Calico stable at low users, trend changes at high users
+CPU_pod    | Cilium behaves predictably                              | Calico behaves predictably                             
+Memory_pod | Cilium behaves predictably                              | Calico behaves predictably                             
+
+### Comparison: Cilium vs Flannel
+
+Trend Table:
+Metric     | Cilium                                     | Flannel            
+Latency    | increasing steadily                        | increasing steadily
+Bandwidth  | mostly stable with spike(s) at user(s) 400 | fluctuates mildly  
+CPU_pod    | increasing steadily                        | increasing steadily
+Memory_pod | increasing steadily                        | increasing steadily
+
+Best/Worst Table:
+Metric     | Best CNI | Worst CNI
+Latency    | Flannel  | Cilium   
+Bandwidth  | Cilium   | Flannel  
+CPU_pod    | Flannel  | Cilium   
+Memory_pod | Flannel  | Cilium   
+
+Scaling Impact Table:
+Metric     | Cilium                   | Flannel                 
+Latency    | scaling shows spike/drop | scaling shows spike/drop
+Bandwidth  | handles scaling well     | handles scaling well    
+CPU_pod    | data NA                  | data NA                 
+Memory_pod | data NA                  | data NA                 
+
+Behavior/Tradeoff Table:
+Metric     | Cilium                                                  | Flannel                                                 
+Latency    | Cilium behaves predictably                              | Flannel behaves predictably                             
+Bandwidth  | Cilium stable at low users, trend changes at high users | Flannel stable at low users, trend changes at high users
+CPU_pod    | Cilium behaves predictably                              | Flannel behaves predictably                             
+Memory_pod | Cilium behaves predictably                              | Flannel behaves predictably                             
+
+### Comparison: Calico vs Flannel
+
+Trend Table:
+Metric     | Calico                                     | Flannel            
+Latency    | increasing steadily                        | increasing steadily
+Bandwidth  | mostly stable with spike(s) at user(s) 100 | fluctuates mildly  
+CPU_pod    | increasing steadily                        | increasing steadily
+Memory_pod | increasing steadily                        | increasing steadily
+
+Best/Worst Table:
+Metric     | Best CNI | Worst CNI
+Latency    | Flannel  | Calico   
+Bandwidth  | Calico   | Flannel  
+CPU_pod    | Flannel  | Calico   
+Memory_pod | Flannel  | Calico   
+
+Scaling Impact Table:
+Metric     | Calico                   | Flannel                 
+Latency    | scaling shows spike/drop | scaling shows spike/drop
+Bandwidth  | handles scaling well     | handles scaling well    
+CPU_pod    | scaling shows spike/drop | data NA                 
+Memory_pod | handles scaling well     | data NA                 
+
+Behavior/Tradeoff Table:
+Metric     | Calico                                                  | Flannel                                                 
+Latency    | Calico behaves predictably                              | Flannel behaves predictably                             
+Bandwidth  | Calico stable at low users, trend changes at high users | Flannel stable at low users, trend changes at high users
+CPU_pod    | Calico behaves predictably                              | Flannel behaves predictably                             
+Memory_pod | Calico behaves predictably                              | Flannel behaves predictably                             
+
+### Summary Table: All 3 CNIs
+
+Metric     | Best Performer | Most Stable | Needs Attention
+Latency    | Flannel        | Flannel     | Cilium         
+Bandwidth  | Cilium         | Calico      | Flannel        
+CPU_pod    | Flannel        | Calico      | Calico         
+Memory_pod | Flannel        | Calico      | Cilium         
