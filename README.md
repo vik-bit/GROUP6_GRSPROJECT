@@ -61,7 +61,7 @@ Load test results are appended to CSV files in the project root:
 
 * `calicoresults.csv` — benchmark data for **Calico**
 * `flannelresults.csv` — benchmark data for **Flannel**
-* `ciliumresults.csv` — **currently under testing; data not available yet**
+* `ciliumresults.csv` — benchmark data for **Cilium**
 
 These CSV files contain **real measured performance metrics** for graphing (using Python) and detailed analysis.
 All graphing scripts (`.py`) should be placed inside the `plots/` folder.
