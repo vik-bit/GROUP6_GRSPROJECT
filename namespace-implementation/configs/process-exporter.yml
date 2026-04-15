@@ -1,0 +1,13 @@
+# Process Exporter configuration
+# Monitors the C microservice binaries running in network namespaces
+
+process_names:
+  # Match all instances of our 'service' binary
+  - name: "{{.Matches}}"
+    cmdline:
+      - 'service'
+
+  # Alternative: match by comm name (shorter process name)
+  - name: "{{.Comm}}"
+    comm:
+      - 'service'
