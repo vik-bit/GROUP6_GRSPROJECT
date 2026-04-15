@@ -14,10 +14,34 @@ spec:
     spec:
       containers:
       - name: service-b
-        image: microservice:latest
-        imagePullPolicy: Never
+        image: microservice:v2
+        imagePullPolicy: IfNotPresent
         env:
         - name: NEXT_SERVICE
           value: "http://service-c"
         ports:
         - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 15
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-b
+spec:
+  selector:
+    app: service-b
+  ports:
+  - port: 80
+    targetPort: 8080
