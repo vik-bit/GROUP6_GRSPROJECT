@@ -10,9 +10,9 @@ REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "10"))
 
 class MicroserviceUser(HttpUser):
     # Keep wait times conservative for resource-limited VMs
+    host = "http://localhost"
     wait_time = between(1, 3)
-
-    @task
+    @task 
     def call_service_chain(self):
         # Retry on transient errors with small exponential backoff
         for attempt in range(MAX_RETRIES):

@@ -18,7 +18,7 @@ from locust.stats import StatsCSVFileWriter
 from locust import events
 
 # import VM-specific locustfile
-from locustfile_vm_import import MicroserviceUser  # placeholder import override below
+#from locustfile_vm import MicroserviceUser  # placeholder import override below
 
 
 def _env_int(name, default):
@@ -52,6 +52,8 @@ def main():
     env = Environment(user_classes=[UserClass])
     if target_host:
         env.host = target_host
+    else:
+       env.host = "http://10.97.249.201"
 
     runner = env.create_local_runner()
 
@@ -62,7 +64,7 @@ def main():
     gevent.sleep(WARM_UP)
 
     print("Starting CSV writers...")
-    csv_writer = StatsCSVFileWriter(environment=env, base_filename=CSV_BASE)
+    csv_writer = StatsCSVFileWriter(environment=env, filename_prefix=CSV_BASE)
 
     test_phase = max(0, RUN_TIME - WARM_UP)
     print(f"Running test phase for {test_phase} seconds...")
