@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: service-c
-        image: microservice:v2
+        image: bsuryadeep/microservice:v2
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080

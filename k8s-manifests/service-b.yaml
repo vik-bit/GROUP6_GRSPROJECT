@@ -14,24 +14,30 @@ spec:
     spec:
       containers:
       - name: service-b
-        image: microservice:v2
+        image: bsuryadeep/microservice:v2
         imagePullPolicy: IfNotPresent
         env:
         - name: NEXT_SERVICE
           value: "http://service-c"
         ports:
         - containerPort: 8080
+        startupProbe:
+          httpGet:
+            path: /
+            port: 8080
+          failureThreshold: 30
+          periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /
             port: 8080
-          initialDelaySeconds: 3
-          periodSeconds: 5
+          initialDelaySeconds: 60
+          periodSeconds: 10
         livenessProbe:
           httpGet:
             path: /
             port: 8080
-          initialDelaySeconds: 10
+          initialDelaySeconds: 120
           periodSeconds: 15
 
 ---
