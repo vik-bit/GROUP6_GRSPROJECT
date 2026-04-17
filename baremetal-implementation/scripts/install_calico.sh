@@ -34,7 +34,31 @@ log "Installing Calico CNI..."
 kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.29.3/manifests/tigera-operator.yaml 2>/dev/null || \
     kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.29.3/manifests/tigera-operator.yaml
 
+# Wait for the Tigera operator to be running and CRDs to be registered
+log "Waiting for Tigera operator to start and register CRDs..."
+
+# Wait for operator pod to be running
+for i in $(seq 1 60); do
+    if kubectl get pods -n tigera-operator 2>/dev/null | grep -q Running; then
+        break
+    fi
+    sleep 3
+done
+
+# Wait for the Installation CRD to be available
+for i in $(seq 1 60); do
+    if kubectl get crd installations.operator.tigera.io &>/dev/null; then
+        log "Installation CRD is registered"
+        break
+    fi
+    sleep 3
+done
+
+# Small extra wait to ensure the API is fully ready
+sleep 5
+
 # Apply custom resource with our pod CIDR
+log "Applying Calico Installation resource..."
 cat <<EOF | kubectl apply -f -
 apiVersion: operator.tigera.io/v1
 kind: Installation
