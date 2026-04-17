@@ -62,17 +62,17 @@ restore_iptables_forward() {
 }
 
 # Method 1: Use Docker if available AND running
-if command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
+if command -v docker &>/dev/null && sudo docker info &>/dev/null 2>&1; then
     setup_docker_no_iptables
     sudo systemctl restart docker 2>/dev/null; sleep 2
     restore_iptables_forward
 
     log "Building with Docker..."
-    docker build -t microservice:latest "$MICROSERVICE_DIR"
+    sudo docker build -t microservice:latest "$MICROSERVICE_DIR"
 
     # Export from Docker and import into containerd
     log "Importing image into containerd..."
-    docker save microservice:latest | sudo ctr -n k8s.io images import -
+    sudo docker save microservice:latest | sudo ctr -n k8s.io images import -
     success "Image built and imported via Docker"
 
     # Stop Docker to prevent ongoing iptables interference
@@ -89,9 +89,9 @@ elif command -v docker &>/dev/null; then
         restore_iptables_forward
 
         log "Building with Docker..."
-        docker build -t microservice:latest "$MICROSERVICE_DIR"
+        sudo docker build -t microservice:latest "$MICROSERVICE_DIR"
         log "Importing image into containerd..."
-        docker save microservice:latest | sudo ctr -n k8s.io images import -
+        sudo docker save microservice:latest | sudo ctr -n k8s.io images import -
         success "Image built and imported via Docker"
 
         # Stop Docker after build
@@ -186,11 +186,11 @@ fi
 # ==============================================================================
 log "Step 2: Verifying image in containerd..."
 
-if crictl images | grep -q "microservice"; then
+if sudo crictl images 2>/dev/null | grep -q "microservice"; then
     success "Image 'microservice:latest' is available in containerd"
 else
     # Try listing with ctr
-    if ctr -n k8s.io images ls | grep -q "microservice"; then
+    if sudo ctr -n k8s.io images ls 2>/dev/null | grep -q "microservice"; then
         success "Image 'microservice:latest' is available in containerd"
     else
         warn "Image may not be visible yet. Proceeding anyway..."

@@ -78,6 +78,10 @@ rm -rf /run/flannel/
 rm -rf /var/lib/calico/
 rm -rf /var/run/calico/
 rm -rf /var/lib/cilium/
+# Cilium mounts a cgroup2 fs at /run/cilium/cgroupv2 — must unmount before removing
+if mount | grep -q '/run/cilium/cgroupv2'; then
+    umount /run/cilium/cgroupv2 2>/dev/null || umount -l /run/cilium/cgroupv2 2>/dev/null || true
+fi
 rm -rf /run/cilium/
 success "CNI state cleaned"
 
