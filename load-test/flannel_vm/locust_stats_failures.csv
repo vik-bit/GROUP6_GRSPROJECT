@@ -1,1 +1,2 @@
 Method,Name,Error,Occurrences
+GET,/,CatchResponseError('Error 0'),265
