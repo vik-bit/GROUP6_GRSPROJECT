@@ -57,8 +57,23 @@ echo "  ✅ iptables rules cleaned"
 # -------------------- Step 3: Remove VXLAN interfaces --------------------
 echo "📌 Removing VXLAN interfaces..."
 
+# Remove ip rules (vxlan mode loop-breaks)
+ip rule del iif veth-tun2 table 201 2>/dev/null || true
+ip rule del iif veth-tun1 table main 2>/dev/null || true
+ip route flush table 201 2>/dev/null || true
+
+# Revert the replaced node2 subnet route and the /32 gateway host route.
+ip route del 10.0.2.0/24 via 192.168.100.2 dev veth-tun1 2>/dev/null || true
+ip route del 10.0.2.1/32 dev br-node2 2>/dev/null || true
+
+# Remove FORWARD rules for the veth-tun pair (vxlan mode)
+iptables -D FORWARD -i veth-tun1 -j ACCEPT 2>/dev/null || true
+iptables -D FORWARD -i veth-tun2 -j ACCEPT 2>/dev/null || true
+
+# Remove VXLAN interfaces and underlay tunnel veth pair
 ip link del vxlan1 2>/dev/null || true
 ip link del vxlan2 2>/dev/null || true
+ip link del veth-tun1 2>/dev/null || true   # removing one end deletes both
 
 echo "  ✅ VXLAN interfaces removed"
 
