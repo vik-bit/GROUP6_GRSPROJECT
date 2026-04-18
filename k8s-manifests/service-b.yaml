@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-b
+  template:
+    metadata:
+      labels:
+        app: service-b
+    spec:
+      containers:
+      - name: service-b
+        image: microservice:latest
+        imagePullPolicy: Never
+        env:
+        - name: NEXT_SERVICE
+          value: "http://service-c"
+        ports:
+        - containerPort: 8080
