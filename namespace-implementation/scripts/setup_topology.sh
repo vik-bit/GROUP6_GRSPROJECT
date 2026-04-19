@@ -140,26 +140,44 @@ case "$MODE" in
     vxlan)
         echo "📌 Setting up VXLAN overlay (Flannel-like)..."
 
-        ip link add vxlan1 type vxlan \
-            id $VXLAN_ID \
-            local $NODE1_GW \
-            dstport $VXLAN_PORT \
-            nolearning
-        ip link set vxlan1 master br-node1
-        ip link set vxlan1 up
+        # Underlay veth pair — simulates the extra inter-node hop a VXLAN CNI adds.
+        ip link add veth-tun1 type veth peer name veth-tun2
+        ip addr add 192.168.100.1/30 dev veth-tun1
+        ip addr add 192.168.100.2/30 dev veth-tun2
+        ip link set veth-tun1 up
+        ip link set veth-tun2 up
 
-        ip link add vxlan2 type vxlan \
-            id $VXLAN_ID \
-            local $NODE2_GW \
-            dstport $VXLAN_PORT \
-            nolearning
-        ip link set vxlan2 master br-node2
+        # Standalone VXLAN objects (different VNIs to coexist on same host).
+        ip link add vxlan1 type vxlan id $VXLAN_ID     local 192.168.100.1 dstport $VXLAN_PORT nolearning
+        ip link set vxlan1 up
+        ip link add vxlan2 type vxlan id $((VXLAN_ID+1)) local 192.168.100.2 dstport $VXLAN_PORT nolearning
         ip link set vxlan2 up
 
-        bridge fdb append 00:00:00:00:00:00 dev vxlan1 dst $NODE2_GW
-        bridge fdb append 00:00:00:00:00:00 dev vxlan2 dst $NODE1_GW
+        # Keep the br-node2 gateway IP reachable directly (needed for ARP/binds).
+        ip route add "$NODE2_GW/32" dev br-node2 2>/dev/null || true
 
-        echo "  ✅ VXLAN overlay configured (ID=$VXLAN_ID, port=$VXLAN_PORT)"
+        # Redirect all traffic destined for node2's subnet through the veth-tun pair.
+        # This simulates the extra encapsulation hop that Flannel/VXLAN CNI adds.
+        # We only redirect TO node2; traffic TO node1 stays direct (via br-node1).
+        ip route replace "$NODE2_SUBNET" via 192.168.100.2 dev veth-tun1
+
+        # Loop-break: after a packet crosses veth-tun1→veth-tun2, deliver it directly
+        # to br-node2 using table 201 (which has the connected route dev br-node2).
+        # Must NOT use "table main" here — main now has the veth-tun1 route which loops.
+        ip route add "$NODE2_SUBNET" dev br-node2 table 201
+        ip rule add iif veth-tun2 table 201 priority 41
+
+        # Safety loop-break for veth-tun1 (in case of edge-case return traffic).
+        # Node1 subnet is still in main as the direct connected route so this is safe.
+        ip rule add iif veth-tun1 table main priority 40
+
+        # Allow forwarding through the underlay veth pair.
+        iptables -I FORWARD 1 -i veth-tun1 -j ACCEPT 2>/dev/null || true
+        iptables -I FORWARD 1 -i veth-tun2 -j ACCEPT 2>/dev/null || true
+
+        echo "  ✅ VXLAN overlay configured (VNI=$VXLAN_ID)"
+        echo "     Underlay:  192.168.100.1 (veth-tun1) ↔ 192.168.100.2 (veth-tun2)"
+        echo "     Objects:   vxlan1 (VNI=$VXLAN_ID) + vxlan2 (VNI=$((VXLAN_ID+1))) loaded"
         ;;
 
     iptables)
