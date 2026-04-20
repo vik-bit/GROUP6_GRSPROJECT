@@ -78,8 +78,8 @@ All graphing scripts (`.py`) should be placed inside the `plots/` folder.
 | **Percentile95_latency_ms** | 95th percentile of response latency (in ms)       |
 | **CPU_pods**                | Aggregate CPU usage of pods                       |
 | **Memory_pods**             | Aggregate memory usage of pods (MB)               |
-| **CPU_nodes**               | CPU usage on Kind nodes                           |
-| **Memory_nodes**            | Memory usage on Kind nodes (MB)                   |
+| **CPU_nodes**               | CPU usage on nodes                                |
+| **Memory_nodes**            | Memory usage on nodes (MB)                        |
 | **Ping_intra_ms**           | Latency inside a node (pod-to-pod same node)      |
 | **Ping_inter_ms**           | Latency across nodes (pod-to-pod different nodes) |
 | **Bandwidth_mbps**          | Network throughput in Mbps                        |
