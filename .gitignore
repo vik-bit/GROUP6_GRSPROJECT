@@ -1,5 +1,6 @@
 .venv/
 venv/
 k8s-manifests/locust-env/
+vm-implementation/k8s_manifests/locust-env
 **/__pycache__/
 *.pyc
