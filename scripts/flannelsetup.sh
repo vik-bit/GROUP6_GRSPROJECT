@@ -88,6 +88,7 @@ echo "🚀 Creating Kind multi-node cluster..."
 kind create cluster --name $CLUSTER_NAME --config "$CLUSTER_YAML" --wait 90s
 echo "📦 Copying CNI plugins into Kind nodes..."
 
+bash "$PROJECT_ROOT/cluster/fetch-cni-plugins.sh"
 echo "📦 Setting up CNI plugins inside Kind nodes..."
 for node in $(kind get nodes --name $CLUSTER_NAME); do
     # create the directory if it doesn't exist

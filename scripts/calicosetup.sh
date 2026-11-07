@@ -79,6 +79,7 @@ echo "🚀 Creating Kind multi-node cluster..."
 kind create cluster --name "$CLUSTER_NAME" --config "$CLUSTER_YAML" --wait 90s
 
 # ------------------- Step 5: Setup CNI plugins -------------------
+bash "$PROJECT_ROOT/cluster/fetch-cni-plugins.sh"
 echo "📦 Copying Calico CNI plugins into Kind nodes..."
 for node in $(kind get nodes --name "$CLUSTER_NAME"); do
     docker exec "$node" mkdir -p /opt/cni/bin
